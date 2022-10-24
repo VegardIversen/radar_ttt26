@@ -26,7 +26,8 @@ roc = 10 #ROC in meters
 total_loss = transmitter_loss + receiver_loss + signal_processing_loss #dB
 duty_cycle = pulse_width*pulse_repetition_frequency
 p_d = np.arange(0.1, 0.99, 0.01)
-n_p_td = (constants.c/Xband_freq)//T_d #number of pulses per dwell time
+
+n_p_td = pulse_repetition_frequency* horisontal_beam_width/(6*rotation_rate)  #number of pulses per dwell time
 
 #function to convert from dB to linear
 def db2lin(x):
@@ -107,22 +108,33 @@ def Shnidman_arr2(p_d_arr, swir, p_fa=1e-6, N=1):
     return arr
 if __name__ == "__main__":
     R = np.arange(10, 10000, 1)
-    snr_arr_alb = Albersheim_arr(p_d, p_fa, n_p_td)
-    snr_arr_shn = Shnidman_arr(p_d, 0, p_fa, n_p_td)
-    snr_arr_shn1 = Shnidman_arr2(p_d, 1, p_fa, n_p_td)
-    
+    single_pulse_shni = Shnidman_arr2(p_d, 0, p_fa, 1)
+    snr_arr_alb_coherent = Albersheim_arr(p_d, p_fa, n_p_td)
+    snr_arr_shn_coherent = Shnidman_arr2(p_d, 0, p_fa, n_p_td)
+    snr_arr_shn1_coherent = Shnidman_arr2(p_d, 1, p_fa, n_p_td)
+    snr_arr_alb_noncoherent = Albersheim_arr(p_d, p_fa, n_p)
+    snr_arr_shn_noncoherent = Shnidman_arr2(p_d, 0, p_fa, n_p)
+    snr_arr_shn1_noncoherent = Shnidman_arr2(p_d, 1, p_fa, n_p)   
    
+    range_det_single_pulse_shnid = range_det(peak_power, db2lin(antenna_gain), db2lin(antenna_gain), constants.c/Xband_freq, roc, 1, db2lin(single_pulse_shni), db2lin(receiver_noise_figure),receiver_bandwidth, db2lin(total_loss))
+    range_det_alb_arr_coherent = range_det(peak_power, db2lin(antenna_gain), db2lin(antenna_gain), constants.c/Xband_freq, roc, n_p, db2lin(snr_arr_alb_coherent), db2lin(receiver_noise_figure),receiver_bandwidth, db2lin(total_loss))
+    range_det_shn_arr_coherent = range_det(peak_power, db2lin(antenna_gain), db2lin(antenna_gain), constants.c/Xband_freq, roc, n_p, db2lin(snr_arr_shn_coherent), db2lin(receiver_noise_figure),receiver_bandwidth, db2lin(total_loss))
+    range_det_shn1_arr_coherent = range_det(peak_power, db2lin(antenna_gain), db2lin(antenna_gain), constants.c/Xband_freq, roc, n_p, db2lin(snr_arr_shn1_coherent), db2lin(receiver_noise_figure),receiver_bandwidth, db2lin(total_loss))
+    range_det_alb_arr_noncoherent = range_det(peak_power, db2lin(antenna_gain), db2lin(antenna_gain), constants.c/Xband_freq, roc, n_p_td, db2lin(snr_arr_alb_noncoherent), db2lin(receiver_noise_figure),receiver_bandwidth, db2lin(total_loss))
+    range_det_shn_arr_noncoherent = range_det(peak_power, db2lin(antenna_gain), db2lin(antenna_gain), constants.c/Xband_freq, roc, n_p_td, db2lin(snr_arr_shn_noncoherent), db2lin(receiver_noise_figure),receiver_bandwidth, db2lin(total_loss))
+    range_det_shn1_arr_noncoherent = range_det(peak_power, db2lin(antenna_gain), db2lin(antenna_gain), constants.c/Xband_freq, roc, n_p_td, db2lin(snr_arr_shn1_noncoherent), db2lin(receiver_noise_figure),receiver_bandwidth, db2lin(total_loss))
     
-    range_det_alb_arr = range_det(peak_power, db2lin(antenna_gain), db2lin(antenna_gain), constants.c/Xband_freq, roc, n_p, db2lin(snr_arr_alb), db2lin(receiver_noise_figure),receiver_bandwidth, db2lin(total_loss))
-    range_det_shn_arr = range_det(peak_power, db2lin(antenna_gain), db2lin(antenna_gain), constants.c/Xband_freq, roc, n_p, db2lin(snr_arr_shn), db2lin(receiver_noise_figure),receiver_bandwidth, db2lin(total_loss))
-    range_det_shn1_arr = range_det(peak_power, db2lin(antenna_gain), db2lin(antenna_gain), constants.c/Xband_freq, roc, n_p, db2lin(snr_arr_shn1), db2lin(receiver_noise_figure),receiver_bandwidth, db2lin(total_loss))
     #SNR_arr = SNR_array(peak_power, db2lin(antenna_gain), db2lin(antenna_gain), constants.c/Xband_freq, sigma, 1, db2lin(receiver_noise_figure), receiver_bandwidth, db2lin(total_loss))
-    plt.plot(range_det_alb_arr, p_d, label='Albersheim')
-    plt.plot(range_det_shn_arr, p_d, label='Shnidman swerling 0')
-    plt.plot(range_det_shn1_arr, p_d, label='Shnidman swerling 1')
+    plt.plot(range_det_alb_arr_coherent, p_d,  label='Albersheim coherent')
+    plt.plot(range_det_single_pulse_shnid, p_d, label='single pulse shnidman')
+    plt.plot(range_det_shn_arr_coherent, p_d, label='Shnidman swerling 0 coherent', )
+    plt.plot(range_det_shn1_arr_coherent, p_d, label='Shnidman swerling 1 coherent')
+    plt.plot(range_det_alb_arr_noncoherent, p_d,linestyle='dashed', label='Albersheim noncoherent')
+    plt.plot(range_det_shn_arr_noncoherent, p_d,linestyle='dashed', label='Shnidman swerling 0 noncoherent')
+    plt.plot(range_det_shn1_arr_noncoherent, p_d,linestyle='dashed', label='Shnidman swerling 1 noncoherent')
     plt.xlabel('Range [m]')
     plt.ylabel('p_d')
-    plt.title(f'Range vs p_d with swerling 0, 1 and Albersheim, with N={n_p_td} (coherently integrated pulses)') 
+    plt.title(f'Range vs p_d with swerling 0, 1 and Albersheim') 
     plt.legend()
     plt.show()
     #print(np.power(constants.c/Xband_freq, 2))
